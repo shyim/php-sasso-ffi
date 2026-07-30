@@ -5,15 +5,18 @@ declare(strict_types=1);
 namespace Sasso\Composer;
 
 use Composer\Command\BaseCommand;
-use Sasso\Downloader;
 use Sasso\Exception as SassoException;
-use Sasso\Platform;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
  * `composer sasso:install` — fetch the native library on demand.
+ *
+ * Only available when this package is installed as a dependency and the plugin
+ * is allowed. From a checkout of this repo itself, use `php bin/sasso-install`
+ * or `composer run sasso-install` instead (Composer never loads the root
+ * package as a plugin).
  *
  * Beyond retrying a failed install, --target lets an image build prefetch a
  * platform other than the one doing the building (an arm64 CI runner baking an
@@ -42,54 +45,16 @@ final class InstallBinaryCommand extends BaseCommand
         $force = (bool) $input->getOption('force');
 
         try {
-            $targets = $this->resolveTargets($requested);
+            $installer = new BinaryInstaller(
+                fn (string $m) => $output->writeln('<info>sasso:</info> ' . $m)
+            );
+            $installer->install($requested, $force);
         } catch (SassoException $e) {
             $output->writeln('<error>' . $e->getMessage() . '</error>');
 
             return 1;
         }
 
-        $downloader = new Downloader(fn (string $m) => $output->writeln('<info>sasso:</info> ' . $m));
-        $failed = 0;
-
-        foreach ($targets as $target) {
-            try {
-                $path = $downloader->install($target, Platform::VERSION, $force);
-                $output->writeln(sprintf('<info>sasso:</info> %s ready at %s', $target, $path));
-            } catch (SassoException $e) {
-                $output->writeln(sprintf('<error>sasso: %s failed: %s</error>', $target, $e->getMessage()));
-                $failed++;
-            }
-        }
-
-        return $failed === 0 ? 0 : 1;
-    }
-
-    /**
-     * @param  list<string> $requested
-     * @return list<string>
-     */
-    private function resolveTargets(array $requested): array
-    {
-        if ($requested === []) {
-            return [Platform::target()];
-        }
-
-        if (in_array('all', $requested, true)) {
-            return Platform::knownTargets();
-        }
-
-        $known = Platform::knownTargets();
-        foreach ($requested as $target) {
-            if (!in_array($target, $known, true)) {
-                throw new SassoException(sprintf(
-                    "Unknown target \"%s\". Available targets:\n  %s",
-                    $target,
-                    implode("\n  ", $known),
-                ));
-            }
-        }
-
-        return array_values($requested);
+        return 0;
     }
 }

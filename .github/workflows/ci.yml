@@ -37,7 +37,8 @@ jobs:
         run: php -r "require 'vendor/autoload.php'; echo Sasso\Platform::target(), PHP_EOL;"
 
       - name: Download the native library
-        run: composer sasso:install
+        # Root package is never loaded as a Composer plugin; use the bin script.
+        run: php bin/sasso-install
 
       - name: Test
         run: vendor/bin/phpunit

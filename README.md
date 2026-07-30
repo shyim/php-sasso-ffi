@@ -158,6 +158,17 @@ detects the target triple for your PHP process, downloads the matching `-c-api`
 archive from the sasso release, verifies its SHA-256 against a pinned checksum,
 and extracts the shared library to `vendor/shyim/sasso-ffi/bin/<target>/`.
 
+Allow the plugin once in the consuming project (Composer 2.2+):
+
+```json
+{
+    "config": {
+        "allow-plugins": {
+            "shyim/sasso-ffi": true
+        }
+    }
+}
+```
 
 Detection follows the **PHP binary**, not the host CPU — an x86_64 PHP under
 Rosetta gets the x86_64 library, which is the one it can actually load.
@@ -177,10 +188,22 @@ platform, a PHAR — the library is fetched on first use instead, so a failed
 download at install time is a warning rather than a hard error.
 
 ```bash
-composer sasso:install                                     # retry / fetch now
-composer sasso:install --target=x86_64-unknown-linux-gnu   # prefetch another platform
-composer sasso:install --target=all --force                # every target, re-downloaded
+# When installed as a dependency (plugin allowed):
+composer sasso:install
+composer sasso:install --target=x86_64-unknown-linux-gnu
+composer sasso:install --target=all --force
+
+# Always works (root checkout, --no-plugins, CI):
+php bin/sasso-install
+php bin/sasso-install --target=x86_64-unknown-linux-gnu
+php bin/sasso-install --target=all --force
+# or, after composer install in a consumer project:
+vendor/bin/sasso-install
 ```
+
+`composer sasso:install` is registered by the plugin. Composer never loads the
+**root** package as a plugin, so inside this repository use `php bin/sasso-install`
+(or `composer run sasso-install`) instead.
 
 Cross-target prefetch is the useful one for Docker: bake the Linux library into
 an image from an arm64 laptop without waiting for the container to fetch it.

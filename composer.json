@@ -31,10 +31,15 @@
     "extra": {
         "class": "Sasso\\Composer\\Plugin"
     },
+    "bin": [
+        "bin/sasso-install"
+    ],
     "scripts": {
+        "sasso-install": "@php bin/sasso-install",
         "test": "phpunit"
     },
     "config": {
         "sort-packages": true
     }
 }
+
