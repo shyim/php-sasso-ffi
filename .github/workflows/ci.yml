@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Covers all four non-Windows targets plus the msvc one, so a broken
+        # target triple or archive layout shows up here rather than downstream.
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-13, macos-latest, windows-latest]
+        php: ['8.2', '8.4']
+        exclude:
+          - { os: ubuntu-24.04-arm, php: '8.2' }
+          - { os: macos-13, php: '8.2' }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ffi, zip
+          ini-values: ffi.enable=1
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Report detected target
+        run: php -r "require 'vendor/autoload.php'; echo Sasso\Platform::target(), PHP_EOL;"
+
+      - name: Download the native library
+        run: php -r "require 'vendor/autoload.php'; echo (new Sasso\Downloader(fn(\$m) => print(\$m . PHP_EOL)))->install(Sasso\Platform::target()), PHP_EOL;"
+
+      - name: Test
+        run: vendor/bin/phpunit

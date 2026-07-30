@@ -1,0 +1,40 @@
+{
+    "name": "shyim/sasso-ffi",
+    "description": "Pure-PHP FFI polyfill for ext-sasso (shyim/sasso), the pure-Rust SCSS to CSS compiler, with a Composer plugin that downloads the matching native library",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "keywords": ["scss", "sass", "css", "compiler", "ffi", "polyfill", "sasso"],
+    "homepage": "https://github.com/shyim/sasso-ffi",
+    "require": {
+        "php": ">=8.2",
+        "ext-ffi": "*",
+        "composer-plugin-api": "^2.0"
+    },
+    "require-dev": {
+        "composer/composer": "^2.4",
+        "phpunit/phpunit": "^10.5 || ^11.0"
+    },
+    "conflict": {
+        "ext-sasso": "*",
+        "shyim/sasso": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Sasso\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Sasso\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "class": "Sasso\\Composer\\Plugin"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
