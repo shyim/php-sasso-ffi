@@ -14,11 +14,11 @@ jobs:
       matrix:
         # Covers all four non-Windows targets plus the msvc one, so a broken
         # target triple or archive layout shows up here rather than downstream.
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-13, macos-latest, windows-latest]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, windows-latest]
         php: ['8.2', '8.4']
         exclude:
           - { os: ubuntu-24.04-arm, php: '8.2' }
-          - { os: macos-13, php: '8.2' }
+          - { os: macos-latest, php: '8.2' }
 
     steps:
       - uses: actions/checkout@v4
