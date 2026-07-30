@@ -33,10 +33,11 @@ jobs:
         run: composer install --no-interaction --no-progress
 
       - name: Report detected target
+        # Avoid $ variables in -r one-liners: bash needs \$ escaping, cmd/PowerShell does not.
         run: php -r "require 'vendor/autoload.php'; echo Sasso\Platform::target(), PHP_EOL;"
 
       - name: Download the native library
-        run: php -r "require 'vendor/autoload.php'; echo (new Sasso\Downloader(fn(\$m) => print(\$m . PHP_EOL)))->install(Sasso\Platform::target()), PHP_EOL;"
+        run: composer sasso:install
 
       - name: Test
         run: vendor/bin/phpunit
