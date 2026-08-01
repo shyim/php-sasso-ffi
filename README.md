@@ -153,22 +153,35 @@ unchanged rather than being flattened into a `CompileException`.
 
 ## How the native library gets there
 
-This package is also a Composer plugin. On `composer install`/`update` it
-detects the target triple for your PHP process, downloads the matching `-c-api`
-archive from the sasso release, verifies its SHA-256 against a pinned checksum,
-and extracts the shared library to `vendor/shyim/sasso-ffi/bin/<target>/`.
+Provisioning is delegated to
+[shyim/composer-binary-downloader](https://github.com/shyim/composer-binary-downloader),
+a generic plugin that reads `extra.binaries` from this package's `composer.json`.
+On `composer install`/`update` it detects the target triple for your PHP process,
+downloads the matching `-c-api` archive from the sasso release, verifies its
+SHA-256 against a pinned checksum, and extracts the shared library to
+`vendor/shyim/sasso-ffi/bin/<target>/`.
 
-Allow the plugin once in the consuming project (Composer 2.2+):
+The consuming project allows the plugin, and — because downloading code from a
+URL a dependency chose is gated the same way plugins are — approves this package
+as a binary source:
 
 ```json
 {
     "config": {
         "allow-plugins": {
+            "shyim/composer-binary-downloader": true
+        }
+    },
+    "extra": {
+        "allow-binaries": {
             "shyim/sasso-ffi": true
         }
     }
 }
 ```
+
+An interactive `composer install` prompts for the `allow-binaries` entry and
+writes it for you; CI needs it committed.
 
 Detection follows the **PHP binary**, not the host CPU — an x86_64 PHP under
 Rosetta gets the x86_64 library, which is the one it can actually load.
@@ -183,27 +196,24 @@ Rosetta gets the x86_64 library, which is the one it can actually load.
 | `aarch64-unknown-linux-musl` | `libsasso.so` |
 | `x86_64-pc-windows-msvc` | `sasso.dll` |
 
-If the plugin never runs — `--no-plugins`, a `vendor/` built on another
-platform, a PHAR — the library is fetched on first use instead, so a failed
-download at install time is a warning rather than a hard error.
+Loading the compiler never downloads anything: `Sasso\Compiler` resolves the
+already-installed path, so a web request cannot stall on a release host. If the
+download did not happen — `--no-plugins`, a `vendor/` built on another platform —
+the first compile fails with a message naming the expected path and the command
+that fixes it.
 
 ```bash
-# When installed as a dependency (plugin allowed):
-composer sasso:install
-composer sasso:install --target=x86_64-unknown-linux-gnu
-composer sasso:install --target=all --force
+composer binary:install                              # this platform
+composer binary:install sasso --target=x86_64-unknown-linux-gnu
+composer binary:install -t all --force
+composer binary:list                                 # configured vs. on disk
 
-# Always works (root checkout, --no-plugins, CI):
-php bin/sasso-install
-php bin/sasso-install --target=x86_64-unknown-linux-gnu
-php bin/sasso-install --target=all --force
-# or, after composer install in a consumer project:
-vendor/bin/sasso-install
+# Without the plugin (--no-plugins, or a root checkout):
+php vendor/bin/binary-download
 ```
 
-`composer sasso:install` is registered by the plugin. Composer never loads the
-**root** package as a plugin, so inside this repository use `php bin/sasso-install`
-(or `composer run sasso-install`) instead.
+`composer binary:list` is the diagnostic for a failing `FFI::cdef()`: it prints
+the exact path that was expected and whether it exists.
 
 Cross-target prefetch is the useful one for Docker: bake the Linux library into
 an image from an arm64 laptop without waiting for the container to fetch it.
@@ -212,28 +222,31 @@ an image from an arm64 laptop without waiting for the container to fetch it.
 
 | Variable | Effect |
 | --- | --- |
+Read by the binary downloader, which derives them from the `sasso` binary name:
+
+| Variable | Effect |
+| --- | --- |
 | `SASSO_LIBRARY` | Load this library file directly; skips detection and download |
 | `SASSO_TARGET` | Force a target triple |
-| `SASSO_DOWNLOAD_BASE_URL` | Fetch archives from a mirror (disables the pinned checksum) |
-| `SASSO_SKIP_DOWNLOAD=1` | Composer plugin does nothing at install time |
-| `SASSO_NO_DOWNLOAD=1` | Never fetch at runtime; error instead |
+| `SASSO_DOWNLOAD_BASE_URL` | Fetch archives from a mirror (drops the pinned checksum) |
+| `SASSO_SKIP_DOWNLOAD` | Never download; a missing library is an error |
+| `BINARY_DOWNLOADER_SKIP` | The same, for every binary in the project |
 
 Air-gapped builds want `SASSO_LIBRARY` (or a vendored `bin/<target>/`) plus
-`SASSO_NO_DOWNLOAD=1`, which turns a missing library into an explicit error
+`SASSO_SKIP_DOWNLOAD`, which turns a missing library into an explicit error
 rather than a network call.
 
 ## Notes
 
-- Bundled sasso release: **0.8.2** (`Sasso\Platform::VERSION`). The library's own
-  `sasso_version()` reports a separate internal compiler version that tracks the
-  release tag loosely — use `Platform::VERSION` for the release these bindings
-  target.
+- Bundled sasso release: **0.8.2**, pinned in `composer.json` under
+  `extra.binaries.sasso.version`. The library's own `sasso_version()` reports a
+  separate internal compiler version that only loosely tracks the release tag.
 - The FFI handle is loaded once per process and shared across compilers.
 - Only `-c-api` archives are published for the seven targets above. There is no
   32-bit build, so those platforms need `SASSO_LIBRARY` pointing at your own.
-- Beyond the extension's surface this package also exposes `Sasso\Platform`,
-  `Sasso\Downloader`, and the plugin classes. They handle binary provisioning,
-  which the extension has no equivalent of; the compiler API itself adds nothing.
+- The PHP surface is exactly ext-sasso's — provisioning lives in the binary
+  downloader, so there are no extra classes here to learn. Its
+  `Shyim\BinaryDownloader\Binaries` API is available for diagnostics.
 
 ## Development
 

@@ -1,17 +1,16 @@
 {
     "name": "shyim/sasso-ffi",
-    "description": "Pure-PHP FFI polyfill for ext-sasso (shyim/sasso), the pure-Rust SCSS to CSS compiler, with a Composer plugin that downloads the matching native library",
-    "type": "composer-plugin",
+    "description": "Pure-PHP FFI polyfill for ext-sasso (shyim/sasso), the pure-Rust SCSS to CSS compiler",
+    "type": "library",
     "license": "MIT",
     "keywords": ["scss", "sass", "css", "compiler", "ffi", "polyfill", "sasso"],
     "homepage": "https://github.com/shyim/sasso-ffi",
     "require": {
         "php": ">=8.2",
         "ext-ffi": "*",
-        "composer-plugin-api": "^2.0"
+        "shyim/composer-binary-downloader": "^0.1"
     },
     "require-dev": {
-        "composer/composer": "^2.4",
         "phpunit/phpunit": "^10.5 || ^11.0"
     },
     "conflict": {
@@ -29,17 +28,45 @@
         }
     },
     "extra": {
-        "class": "Sasso\\Composer\\Plugin"
+        "binaries": {
+            "sasso": {
+                "version": "0.8.2",
+                "repository": "shyim/sasso",
+                "asset": "{name}-v{version}-{target}-c-api.{ext}",
+                "archive": "tar.xz",
+                "path": "bin/{target}/{library}",
+                "optional": false,
+                "targets": {
+                    "x86_64-apple-darwin": "libsasso.dylib",
+                    "aarch64-apple-darwin": "libsasso.dylib",
+                    "x86_64-unknown-linux-gnu": "libsasso.so",
+                    "aarch64-unknown-linux-gnu": "libsasso.so",
+                    "x86_64-unknown-linux-musl": "libsasso.so",
+                    "aarch64-unknown-linux-musl": "libsasso.so",
+                    "x86_64-pc-windows-msvc": { "library": "sasso.dll", "archive": "zip" }
+                },
+                "checksums": {
+                    "x86_64-apple-darwin": "74376699c45ea1502f1b07d046280302750ced29e8262f45eb802038b3fb441f",
+                    "aarch64-apple-darwin": "5f511055100a96c935a734c783b880567fd65e54a87a51c583b7ca8223cee9e7",
+                    "x86_64-unknown-linux-gnu": "d96cd7364e662eaa85feb22d4ec1bbe252e04fb1874a05a20a1821e17573c1bf",
+                    "aarch64-unknown-linux-gnu": "1c3062951f8f9b0e82ec4bb9d524d8659f791ed4e8780c536bd13f9acc78f014",
+                    "x86_64-unknown-linux-musl": "928ec81dabcb91ba2255425df956de5f4f18311fea4c2fbcf72b186836fadce2",
+                    "aarch64-unknown-linux-musl": "64ada4707cce41fea5d371872bd6f521085ff44f91580c336955dd33d068062a",
+                    "x86_64-pc-windows-msvc": "70d5c6d4abfcd8524ccacc92eb4a4f524a13b9b41926d860eab596a60a2001e6"
+                }
+            }
+        },
+        "allow-binaries": {
+            "shyim/sasso-ffi": true
+        }
     },
-    "bin": [
-        "bin/sasso-install"
-    ],
     "scripts": {
-        "sasso-install": "@php bin/sasso-install",
         "test": "phpunit"
     },
     "config": {
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "shyim/composer-binary-downloader": true
+        }
     }
 }
-

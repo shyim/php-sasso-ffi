@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Sasso;
 
 use FFI;
+use Shyim\BinaryDownloader\Binaries;
+use Shyim\BinaryDownloader\Exception\LibraryUnavailableExceptionInterface;
 
 /**
  * Owns the FFI handle to libsasso.
@@ -86,7 +88,7 @@ final class Library
     }
 
     /**
-     * Load libsasso, downloading it if the Composer plugin never ran.
+     * Load libsasso from the path shyim/composer-binary-downloader installed it to.
      *
      * @param string|null $path explicit library to load; defaults to
      *                          $SASSO_LIBRARY, then the installed binary
@@ -120,9 +122,9 @@ final class Library
     /**
      * The version the loaded library reports.
      *
-     * This is sasso's internal compiler version, which tracks the release tag
-     * loosely relative to the release tag. For the release these bindings
-     * target, use Platform::VERSION instead.
+     * This is sasso's internal compiler version, which only loosely tracks the
+     * release tag. The release these bindings target is the one pinned in
+     * composer.json under extra.binaries.sasso.version.
      */
     public function version(): string
     {
@@ -143,36 +145,20 @@ final class Library
         return $this->ffi;
     }
 
+    /**
+     * Where the binary downloader put the library for this platform.
+     *
+     * Deliberately the non-downloading lookup: loading a compiler should never
+     * stall a web request on a release host. Provisioning is the installer's
+     * job, and its exceptions already name the cause and the fix, so they are
+     * passed through with a Sasso type wrapped around them.
+     */
     private static function resolvePath(): string
     {
-        $explicit = getenv('SASSO_LIBRARY');
-        if (is_string($explicit) && $explicit !== '') {
-            if (!is_file($explicit)) {
-                throw new Exception(sprintf('SASSO_LIBRARY points at %s, which does not exist.', $explicit));
-            }
-
-            return $explicit;
+        try {
+            return Binaries::path('sasso');
+        } catch (LibraryUnavailableExceptionInterface $e) {
+            throw new Exception($e->getMessage(), 0, $e);
         }
-
-        $target = Platform::target();
-        $path = Platform::libraryPath($target);
-
-        if (is_file($path)) {
-            return $path;
-        }
-
-        // The plugin is the normal install path; reaching here means it did not
-        // run (--no-plugins, a vendor/ copied between platforms, a PHAR), so
-        // fetch on demand rather than failing on something we can fix.
-        if (getenv('SASSO_NO_DOWNLOAD') === '1') {
-            throw new DownloadException(sprintf(
-                'The sasso library for %s is not installed at %s and SASSO_NO_DOWNLOAD=1 forbids fetching it. '
-                . 'Run `composer sasso:install` or set SASSO_LIBRARY.',
-                $target,
-                $path,
-            ));
-        }
-
-        return (new Downloader())->install($target);
     }
 }

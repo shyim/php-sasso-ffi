@@ -30,15 +30,16 @@ jobs:
           ini-values: ffi.enable=1
 
       - name: Install dependencies
+        # shyim/composer-binary-downloader downloads libsasso as part of this.
         run: composer install --no-interaction --no-progress
 
-      - name: Report detected target
-        # Avoid $ variables in -r one-liners: bash needs \$ escaping, cmd/PowerShell does not.
-        run: php -r "require 'vendor/autoload.php'; echo Sasso\Platform::target(), PHP_EOL;"
-
-      - name: Download the native library
-        # Root package is never loaded as a Composer plugin; use the bin script.
-        run: php bin/sasso-install
+      - name: Verify the native library
+        # composer install already downloaded it; this re-asserts it non-zero on
+        # failure, so a broken target triple or archive layout fails here rather
+        # than downstream. binary:list is diagnostic only and always exits 0.
+        run: |
+          composer binary:install
+          composer binary:list
 
       - name: Test
         run: vendor/bin/phpunit
