@@ -1,5 +1,5 @@
 # Keep the distributed package lean; the native library is downloaded, not shipped.
-# bin/sasso-install is shipped (see composer.json "bin"); only /bin/<target>/ is runtime.
+/bin                    export-ignore
 /tests                  export-ignore
 /examples               export-ignore
 /.github                export-ignore

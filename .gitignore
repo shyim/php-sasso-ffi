@@ -1,6 +1,6 @@
 /vendor/
-# Runtime-downloaded natives live under bin/<target>/; keep the install script.
-/bin/*/
+# bin/<target>/ holds natives the binary downloader fetches at install time.
+/bin/
 composer.lock
 .phpunit.result.cache
 .phpunit.cache/
